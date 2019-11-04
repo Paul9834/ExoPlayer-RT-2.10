@@ -15,6 +15,7 @@ import android.util.Log;
 import android.util.Rational;
 import android.view.View;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.exoplayer2.ExoPlaybackException;
@@ -24,8 +25,12 @@ import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
+import com.google.android.exoplayer2.mediacodec.MediaCodecInfo;
+import com.google.android.exoplayer2.mediacodec.MediaCodecSelector;
+import com.google.android.exoplayer2.mediacodec.MediaCodecUtil;
 import com.google.android.exoplayer2.source.LoopingMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
@@ -35,6 +40,9 @@ import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Reproducción de ExoPlayer a través de microservicio Rest
  *
@@ -43,7 +51,7 @@ import com.google.android.exoplayer2.util.Util;
  */
 
 
-public class PlayerActivity extends AppCompatActivity {
+public class PlayerActivity extends AppCompatActivity implements MediaCodecSelector {
 
   private PlaybackStateListener playbackStateListener;
   private static final String TAG = PlayerActivity.class.getName();
@@ -53,6 +61,7 @@ public class PlayerActivity extends AppCompatActivity {
   private boolean playWhenReady = true;
   private int currentWindow = 0;
   private long playbackPosition = 0;
+  final static String[] BLACKLISTEDCODECS = {"OMX.amlogic.avc.decoder.awesome.secure"};
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +73,34 @@ public class PlayerActivity extends AppCompatActivity {
     playbackStateListener = new PlaybackStateListener();
   }
 
+  @Override
+  public List<MediaCodecInfo> getDecoderInfos(String mimeType, boolean requiresSecureDecoder, boolean requiresTunnelingDecoder) throws MediaCodecUtil.DecoderQueryException {
+
+    List<MediaCodecInfo> codecInfos = MediaCodecUtil.getDecoderInfos(
+            mimeType, requiresSecureDecoder, requiresTunnelingDecoder);
+    // filter codecs based on blacklist template
+    List<MediaCodecInfo> filteredCodecInfos = new ArrayList<>();
+    for (MediaCodecInfo codecInfo: codecInfos) {
+      boolean blacklisted = false;
+      for (String blackListedCodec: BLACKLISTEDCODECS) {
+        if (codecInfo.name.contains(blackListedCodec)) {
+          blacklisted = true;
+          break;
+        }
+      }
+      if (!blacklisted) {
+        filteredCodecInfos.add(codecInfo);
+      }
+    }
+    return filteredCodecInfos;
+
+  }
+
+  @Nullable
+  @Override
+  public MediaCodecInfo getPassthroughDecoderInfo() throws MediaCodecUtil.DecoderQueryException {
+    return MediaCodecUtil.getPassthroughDecoderInfo();
+  }
 
 
   @Override
@@ -128,7 +165,7 @@ public class PlayerActivity extends AppCompatActivity {
     playerView.setPlayer(player);
 
 
-    Uri uri = Uri.parse("http://147.135.84.60:8081/atenea/fx/playlist.m3u8");
+    Uri uri = Uri.parse("http://45.172.222.2:9128/espn2hd");
 
 
     MediaSource mediaSource = buildMediaSource(uri);
@@ -249,7 +286,7 @@ public class PlayerActivity extends AppCompatActivity {
 
     DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this, "exoplayer-codelab");
 
-    HlsMediaSource.Factory mediaSourceFactory = new HlsMediaSource.Factory(dataSourceFactory).setAllowChunklessPreparation(true);
+    ProgressiveMediaSource.Factory mediaSourceFactory = new ProgressiveMediaSource.Factory(dataSourceFactory);
 
     return mediaSourceFactory.createMediaSource(uri);
 
@@ -265,6 +302,7 @@ public class PlayerActivity extends AppCompatActivity {
             | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
             | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
   }
+
 
 
 
