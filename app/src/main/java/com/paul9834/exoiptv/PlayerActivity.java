@@ -51,7 +51,7 @@ import java.util.List;
  */
 
 
-public class PlayerActivity extends AppCompatActivity implements MediaCodecSelector {
+public class PlayerActivity extends AppCompatActivity   {
 
   private PlaybackStateListener playbackStateListener;
   private static final String TAG = PlayerActivity.class.getName();
@@ -61,7 +61,6 @@ public class PlayerActivity extends AppCompatActivity implements MediaCodecSelec
   private boolean playWhenReady = true;
   private int currentWindow = 0;
   private long playbackPosition = 0;
-  final static String[] BLACKLISTEDCODECS = {"OMX.amlogic.avc.decoder.awesome.secure"};
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -71,35 +70,6 @@ public class PlayerActivity extends AppCompatActivity implements MediaCodecSelec
     playerView = findViewById(R.id.video_view);
 
     playbackStateListener = new PlaybackStateListener();
-  }
-
-  @Override
-  public List<MediaCodecInfo> getDecoderInfos(String mimeType, boolean requiresSecureDecoder, boolean requiresTunnelingDecoder) throws MediaCodecUtil.DecoderQueryException {
-
-    List<MediaCodecInfo> codecInfos = MediaCodecUtil.getDecoderInfos(
-            mimeType, requiresSecureDecoder, requiresTunnelingDecoder);
-    // filter codecs based on blacklist template
-    List<MediaCodecInfo> filteredCodecInfos = new ArrayList<>();
-    for (MediaCodecInfo codecInfo: codecInfos) {
-      boolean blacklisted = false;
-      for (String blackListedCodec: BLACKLISTEDCODECS) {
-        if (codecInfo.name.contains(blackListedCodec)) {
-          blacklisted = true;
-          break;
-        }
-      }
-      if (!blacklisted) {
-        filteredCodecInfos.add(codecInfo);
-      }
-    }
-    return filteredCodecInfos;
-
-  }
-
-  @Nullable
-  @Override
-  public MediaCodecInfo getPassthroughDecoderInfo() throws MediaCodecUtil.DecoderQueryException {
-    return MediaCodecUtil.getPassthroughDecoderInfo();
   }
 
 
