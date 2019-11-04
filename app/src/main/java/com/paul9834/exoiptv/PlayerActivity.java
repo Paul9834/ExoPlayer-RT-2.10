@@ -51,7 +51,8 @@ import java.util.List;
  */
 
 
-public class PlayerActivity extends AppCompatActivity   {
+
+public class PlayerActivity extends AppCompatActivity {
 
   private PlaybackStateListener playbackStateListener;
   private static final String TAG = PlayerActivity.class.getName();
@@ -71,6 +72,7 @@ public class PlayerActivity extends AppCompatActivity   {
 
     playbackStateListener = new PlaybackStateListener();
   }
+
 
 
   @Override
@@ -112,13 +114,13 @@ public class PlayerActivity extends AppCompatActivity   {
 
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        enterPictureInPictureMode(
-                new PictureInPictureParams.Builder()
-                        .setAspectRatio(new Rational(350, 200))
-                        .setSourceRectHint(new Rect(
-                                playerView.getLeft(), playerView.getTop(),
-                                playerView.getRight(), playerView.getBottom()))
-                        .build());
+      enterPictureInPictureMode(
+              new PictureInPictureParams.Builder()
+                      .setAspectRatio(new Rational(350, 200))
+                      .setSourceRectHint(new Rect(
+                              playerView.getLeft(), playerView.getTop(),
+                              playerView.getRight(), playerView.getBottom()))
+                      .build());
 
     }
   }
@@ -135,47 +137,51 @@ public class PlayerActivity extends AppCompatActivity   {
     playerView.setPlayer(player);
 
 
-    Uri uri = Uri.parse("http://45.172.222.2:9128/espn2hd");
+    Uri uri = Uri.parse("http://45.172.222.2:9128/rcn");
+
+
+
 
 
     MediaSource mediaSource = buildMediaSource(uri);
 
 
-    final LoopingMediaSource loopingSource = new LoopingMediaSource(mediaSource);
-    player.prepare(loopingSource);
+
+    player.setPlayWhenReady(playWhenReady);
+    player.seekTo(currentWindow, playbackPosition);
+    player.prepare(mediaSource, false, false);
+
+
 
 
     player.addListener(new ExoPlayer.EventListener() {
       @Override
       public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
       }
-
       @Override
       public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
         Log.v(TAG, "Listener-onTracksChanged... ");
       }
-
       @Override
       public void onLoadingChanged(boolean isLoading) {
       }
-
       @Override
       public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
 
         switch(playbackState) {
-          case ExoPlayer.STATE_BUFFERING:
+          case Player.STATE_BUFFERING:
             break;
-          case ExoPlayer.STATE_ENDED:
-            player.seekTo(0);
+          case Player.STATE_ENDED:
+            //Here you do what you want
             break;
-          case ExoPlayer.STATE_IDLE:
+          case Player.STATE_IDLE:
             break;
-          case ExoPlayer.STATE_READY:
+          case Player.STATE_READY:
             break;
           default:
             break;
         }
-  }
+      }
       @Override
       public void onRepeatModeChanged(int repeatMode) {
       }
@@ -189,32 +195,30 @@ public class PlayerActivity extends AppCompatActivity   {
         switch (error.type) {
           case ExoPlaybackException.TYPE_SOURCE:
             Log.e(TAG, "TYPE_SOURCE: " + error.getSourceException().getMessage());
+            player.release();
+            restartApp2();
 
-            player.seekTo(0);
-            player.prepare(loopingSource);
-            player.setPlayWhenReady(true);
 
             break;
 
           case ExoPlaybackException.TYPE_RENDERER:
             Log.e(TAG, "TYPE_RENDERER: " + error.getRendererException().getMessage());
-            player.seekTo(0);
-            player.prepare(loopingSource);
-            player.setPlayWhenReady(true);
+            player.release();
+            restartApp2();
 
 
             break;
 
           case ExoPlaybackException.TYPE_UNEXPECTED:
             Log.e(TAG, "TYPE_UNEXPECTED: " + error.getUnexpectedException().getMessage());
-            player.seekTo(0);
-            player.prepare(loopingSource);
-            player.setPlayWhenReady(true);
+            player.release();
+            restartApp2();
+
 
             break;
         }
 
-        }
+      }
 
 
 
@@ -234,8 +238,8 @@ public class PlayerActivity extends AppCompatActivity   {
       }
     });
 
-    player.seekTo(0);
     player.setPlayWhenReady(true);
+    player.seekTo(0);
 
 
   }
@@ -258,6 +262,8 @@ public class PlayerActivity extends AppCompatActivity   {
 
     ProgressiveMediaSource.Factory mediaSourceFactory = new ProgressiveMediaSource.Factory(dataSourceFactory);
 
+
+
     return mediaSourceFactory.createMediaSource(uri);
 
 
@@ -272,7 +278,6 @@ public class PlayerActivity extends AppCompatActivity   {
             | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
             | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
   }
-
 
 
 
@@ -318,6 +323,7 @@ public class PlayerActivity extends AppCompatActivity   {
   public void restartApp () {
 
     Log.e("PAUL", "Paul");
+
     Intent i = new Intent(PlayerActivity.this, PlayerActivity.class);
     finish();
     overridePendingTransition(0, 0);
