@@ -7,10 +7,12 @@ import android.app.PendingIntent;
 import android.app.PictureInPictureParams;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.util.Rational;
 import android.view.View;
@@ -43,6 +45,11 @@ import com.google.android.exoplayer2.util.Util;
 import java.util.ArrayList;
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 /**
  * Reproducción de ExoPlayer a través de microservicio Rest
  *
@@ -67,6 +74,8 @@ public class PlayerActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_player);
+
+    llamadoSsrvicioRest();
 
     playerView = findViewById(R.id.video_view);
 
@@ -119,8 +128,7 @@ public class PlayerActivity extends AppCompatActivity {
                       .setAspectRatio(new Rational(350, 200))
                       .setSourceRectHint(new Rect(
                               playerView.getLeft(), playerView.getTop(),
-                              playerView.getRight(), playerView.getBottom()))
-                      .build());
+                              playerView.getRight(), playerView.getBottom())).build());
 
     }
   }
@@ -134,24 +142,22 @@ public class PlayerActivity extends AppCompatActivity {
       player = ExoPlayerFactory.newSimpleInstance(this, trackSelector);
     }
 
+
     playerView.setPlayer(player);
 
-
-    Uri uri = Uri.parse("http://45.172.222.2:9128/rcn");
-
-
-
+    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(PlayerActivity.this);
+    SharedPreferences.Editor editor = prefs.edit();
+    String canalURL = prefs.getString("url", "no id");
 
 
+    Log.e("HOLAAA", canalURL);
+
+    Uri uri = Uri.parse(canalURL);
     MediaSource mediaSource = buildMediaSource(uri);
-
-
 
     player.setPlayWhenReady(playWhenReady);
     player.seekTo(currentWindow, playbackPosition);
     player.prepare(mediaSource, false, false);
-
-
 
 
     player.addListener(new ExoPlayer.EventListener() {
@@ -197,38 +203,23 @@ public class PlayerActivity extends AppCompatActivity {
             Log.e(TAG, "TYPE_SOURCE: " + error.getSourceException().getMessage());
             player.release();
             restartApp2();
-
-
             break;
-
           case ExoPlaybackException.TYPE_RENDERER:
             Log.e(TAG, "TYPE_RENDERER: " + error.getRendererException().getMessage());
             player.release();
             restartApp2();
-
-
             break;
-
           case ExoPlaybackException.TYPE_UNEXPECTED:
             Log.e(TAG, "TYPE_UNEXPECTED: " + error.getUnexpectedException().getMessage());
             player.release();
             restartApp2();
-
-
             break;
         }
 
       }
 
-
-
-
       @Override
       public void onPositionDiscontinuity(int reason) {
-
-
-
-
       }
       @Override
       public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
@@ -259,13 +250,8 @@ public class PlayerActivity extends AppCompatActivity {
   private MediaSource buildMediaSource(Uri uri) {
 
     DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this, "exoplayer-codelab");
-
-    ProgressiveMediaSource.Factory mediaSourceFactory = new ProgressiveMediaSource.Factory(dataSourceFactory);
-
-
-
+    HlsMediaSource.Factory mediaSourceFactory = new HlsMediaSource.Factory(dataSourceFactory);
     return mediaSourceFactory.createMediaSource(uri);
-
 
   }
 
@@ -330,6 +316,42 @@ public class PlayerActivity extends AppCompatActivity {
     startActivity(i);
     overridePendingTransition(0, 0);
 
+  }
+
+  public void llamadoSsrvicioRest() {
+    Retrofit retrofit = new Retrofit.Builder()
+            .baseUrl("http://headendredir.terraformed.services/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build();
+    CanalesIDInterface canalesIDInterface = retrofit.create(CanalesIDInterface.class);
+    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(PlayerActivity.this);
+    SharedPreferences.Editor editor = prefs.edit();
+    String id = prefs.getString("id", "no id");
+    Call<List<PostCanalesID>> call = canalesIDInterface.getPosts(id);
+    call.enqueue(new Callback<List<PostCanalesID>>() {
+      @Override
+      public void onResponse(Call<List<PostCanalesID>> call, retrofit2.Response<List<PostCanalesID>> response) {
+        if (!response.isSuccessful()) {
+          return;
+        }
+        List<PostCanalesID> posts = response.body();
+        String url = "";
+        for (PostCanalesID post : posts) {
+          String content = "";
+          content += "link : " + post.getalt_uri() + "\n";
+          url = post.getalt_uri();
+        }
+        //  Log.e("url del ID ", url);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(PlayerActivity.this);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("url", url);
+        editor.apply();
+
+      }
+      @Override
+      public void onFailure(Call<List<PostCanalesID>> call, Throwable t) {
+      }
+    });
   }
 
 }
