@@ -178,13 +178,17 @@ public class PlayerActivity extends AppCompatActivity {
           case Player.STATE_BUFFERING:
             break;
           case Player.STATE_ENDED:
-            //Here you do what you want
+            startPlayer();
             break;
           case Player.STATE_IDLE:
+            startPlayer();
+
             break;
           case Player.STATE_READY:
+            startPlayer();
             break;
-          default:
+
+            default:
             break;
         }
       }
@@ -354,4 +358,12 @@ public class PlayerActivity extends AppCompatActivity {
     });
   }
 
+  private void pausePlayer(){
+    player.setPlayWhenReady(false);
+    player.getPlaybackState();
+  }
+  private void startPlayer(){
+    player.setPlayWhenReady(true);
+    player.getPlaybackState();
+  }
 }
